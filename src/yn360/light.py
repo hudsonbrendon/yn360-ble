@@ -43,14 +43,17 @@ class YN360Light:
 
     async def connect(self) -> None:
         if not self._client.is_connected:
+            _LOGGER.debug("Connecting to YN360 %s", self._device)
             await self._client.connect()
 
     async def disconnect(self) -> None:
         if self._client.is_connected:
+            _LOGGER.debug("Disconnecting from YN360 %s", self._device)
             await self._client.disconnect()
 
     async def _write(self, payload: bytes) -> None:
         await self.connect()
+        _LOGGER.debug("Writing %s to YN360 %s", payload.hex(), self._device)
         await self._client.write_gatt_char(WRITE_CHAR_UUID, payload, response=False)
 
     async def set_rgb(self, r: int, g: int, b: int, brightness: float = 1.0) -> None:
