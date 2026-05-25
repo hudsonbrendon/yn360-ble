@@ -37,3 +37,27 @@ def test_build_white_command_full_warm():
 def test_build_white_command_rejects_over_100():
     with pytest.raises(ValueError):
         build_white_command(101, 0)
+
+
+from yn360.protocol import kelvin_to_cool_warm
+
+
+def test_kelvin_min_is_pure_warm():
+    assert kelvin_to_cool_warm(3200, 1.0) == (0, 100)
+
+
+def test_kelvin_max_is_pure_cool():
+    assert kelvin_to_cool_warm(5500, 1.0) == (100, 0)
+
+
+def test_kelvin_midpoint_is_balanced():
+    assert kelvin_to_cool_warm(4350, 1.0) == (50, 50)
+
+
+def test_kelvin_brightness_scales_both_channels():
+    assert kelvin_to_cool_warm(5500, 0.5) == (50, 0)
+
+
+def test_kelvin_out_of_range_is_clamped():
+    assert kelvin_to_cool_warm(1000, 1.0) == (0, 100)
+    assert kelvin_to_cool_warm(9000, 1.0) == (100, 0)

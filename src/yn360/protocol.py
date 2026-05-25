@@ -35,3 +35,21 @@ def build_white_command(cool: int, warm: int) -> bytes:
     _require_range("cool", cool, 0, 100)
     _require_range("warm", warm, 0, 100)
     return bytes([HEADER, CMD_WHITE, WHITE_CHANNEL, cool, warm, FOOTER])
+
+
+WHITE_MIN_KELVIN = 3200
+WHITE_MAX_KELVIN = 5500
+
+
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
+
+
+def kelvin_to_cool_warm(kelvin: int, brightness: float = 1.0) -> tuple[int, int]:
+    """Map a color temperature (3200-5500K) + brightness (0.0-1.0) to (cool, warm) 0-100."""
+    kelvin = _clamp(kelvin, WHITE_MIN_KELVIN, WHITE_MAX_KELVIN)
+    brightness = _clamp(brightness, 0.0, 1.0)
+    percent_cool = (kelvin - WHITE_MIN_KELVIN) / (WHITE_MAX_KELVIN - WHITE_MIN_KELVIN)
+    cool = round(percent_cool * 100 * brightness)
+    warm = round((1.0 - percent_cool) * 100 * brightness)
+    return cool, warm
