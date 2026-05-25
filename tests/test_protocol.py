@@ -1,6 +1,13 @@
 import pytest
 
-from yn360.protocol import build_rgb_command
+from yn360 import const
+from yn360.protocol import (
+    build_off_command,
+    build_rgb_command,
+    build_white_command,
+    kelvin_to_cool_warm,
+    scale_rgb,
+)
 
 
 def test_build_rgb_command_orange():
@@ -16,14 +23,8 @@ def test_build_rgb_command_rejects_out_of_range():
         build_rgb_command(256, 0, 0)
 
 
-from yn360.protocol import build_off_command
-
-
 def test_build_off_command():
     assert build_off_command() == b"\xae\xa3\x00\x00\x00\x56"
-
-
-from yn360.protocol import build_white_command
 
 
 def test_build_white_command_full_cool():
@@ -37,9 +38,6 @@ def test_build_white_command_full_warm():
 def test_build_white_command_rejects_over_100():
     with pytest.raises(ValueError):
         build_white_command(101, 0)
-
-
-from yn360.protocol import kelvin_to_cool_warm
 
 
 def test_kelvin_min_is_pure_warm():
@@ -63,9 +61,6 @@ def test_kelvin_out_of_range_is_clamped():
     assert kelvin_to_cool_warm(9000, 1.0) == (100, 0)
 
 
-from yn360.protocol import scale_rgb
-
-
 def test_scale_rgb_half_brightness():
     assert scale_rgb(200, 100, 50, 0.5) == (100, 50, 25)
 
@@ -77,9 +72,6 @@ def test_scale_rgb_full_brightness_is_identity():
 def test_scale_rgb_clamps_brightness():
     assert scale_rgb(200, 200, 200, 2.0) == (200, 200, 200)
     assert scale_rgb(200, 200, 200, -1.0) == (0, 0, 0)
-
-
-from yn360 import const
 
 
 def test_uuids_are_lowercase_canonical():
