@@ -53,3 +53,9 @@ def kelvin_to_cool_warm(kelvin: int, brightness: float = 1.0) -> tuple[int, int]
     cool = round(percent_cool * 100 * brightness)
     warm = round((1.0 - percent_cool) * 100 * brightness)
     return cool, warm
+
+
+def scale_rgb(r: int, g: int, b: int, brightness: float = 1.0) -> tuple[int, int, int]:
+    """Scale an RGB triple by brightness (0.0-1.0), returning ints 0-255."""
+    brightness = _clamp(brightness, 0.0, 1.0)
+    return (round(r * brightness), round(g * brightness), round(b * brightness))

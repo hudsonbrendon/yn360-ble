@@ -61,3 +61,19 @@ def test_kelvin_brightness_scales_both_channels():
 def test_kelvin_out_of_range_is_clamped():
     assert kelvin_to_cool_warm(1000, 1.0) == (0, 100)
     assert kelvin_to_cool_warm(9000, 1.0) == (100, 0)
+
+
+from yn360.protocol import scale_rgb
+
+
+def test_scale_rgb_half_brightness():
+    assert scale_rgb(200, 100, 50, 0.5) == (100, 50, 25)
+
+
+def test_scale_rgb_full_brightness_is_identity():
+    assert scale_rgb(255, 153, 0, 1.0) == (255, 153, 0)
+
+
+def test_scale_rgb_clamps_brightness():
+    assert scale_rgb(200, 200, 200, 2.0) == (200, 200, 200)
+    assert scale_rgb(200, 200, 200, -1.0) == (0, 0, 0)
