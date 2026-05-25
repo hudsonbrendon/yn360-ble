@@ -77,3 +77,12 @@ def test_scale_rgb_full_brightness_is_identity():
 def test_scale_rgb_clamps_brightness():
     assert scale_rgb(200, 200, 200, 2.0) == (200, 200, 200)
     assert scale_rgb(200, 200, 200, -1.0) == (0, 0, 0)
+
+
+from yn360 import const
+
+
+def test_uuids_are_lowercase_canonical():
+    assert const.SERVICE_UUID == "f000aa60-0451-4000-b000-000000000000"
+    assert const.WRITE_CHAR_UUID == "f000aa61-0451-4000-b000-000000000000"
+    assert const.NOTIFY_CHAR_UUID == "f000aa63-0451-4000-b000-000000000000"
