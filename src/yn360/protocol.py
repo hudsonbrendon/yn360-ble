@@ -23,3 +23,8 @@ def build_rgb_command(r: int, g: int, b: int) -> bytes:
     _require_range("g", g, 0, 255)
     _require_range("b", b, 0, 255)
     return bytes([HEADER, CMD_RGB, r, g, b, FOOTER])
+
+
+def build_off_command() -> bytes:
+    """Frame for power off: [0xAE, 0xA3, 0x00, 0x00, 0x00, 0x56]."""
+    return bytes([HEADER, CMD_OFF, 0x00, 0x00, 0x00, FOOTER])

@@ -14,3 +14,10 @@ def test_build_rgb_command_black():
 def test_build_rgb_command_rejects_out_of_range():
     with pytest.raises(ValueError):
         build_rgb_command(256, 0, 0)
+
+
+from yn360.protocol import build_off_command
+
+
+def test_build_off_command():
+    assert build_off_command() == b"\xae\xa3\x00\x00\x00\x56"
