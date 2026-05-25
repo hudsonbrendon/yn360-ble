@@ -21,3 +21,19 @@ from yn360.protocol import build_off_command
 
 def test_build_off_command():
     assert build_off_command() == b"\xae\xa3\x00\x00\x00\x56"
+
+
+from yn360.protocol import build_white_command
+
+
+def test_build_white_command_full_cool():
+    assert build_white_command(100, 0) == b"\xae\xaa\x01\x64\x00\x56"
+
+
+def test_build_white_command_full_warm():
+    assert build_white_command(0, 100) == b"\xae\xaa\x01\x00\x64\x56"
+
+
+def test_build_white_command_rejects_over_100():
+    with pytest.raises(ValueError):
+        build_white_command(101, 0)

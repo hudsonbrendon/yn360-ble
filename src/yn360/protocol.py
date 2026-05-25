@@ -28,3 +28,10 @@ def build_rgb_command(r: int, g: int, b: int) -> bytes:
 def build_off_command() -> bytes:
     """Frame for power off: [0xAE, 0xA3, 0x00, 0x00, 0x00, 0x56]."""
     return bytes([HEADER, CMD_OFF, 0x00, 0x00, 0x00, FOOTER])
+
+
+def build_white_command(cool: int, warm: int) -> bytes:
+    """Frame for white mode: [0xAE, 0xAA, 0x01, cool, warm, 0x56]. cool/warm 0-100."""
+    _require_range("cool", cool, 0, 100)
+    _require_range("warm", warm, 0, 100)
+    return bytes([HEADER, CMD_WHITE, WHITE_CHANNEL, cool, warm, FOOTER])
