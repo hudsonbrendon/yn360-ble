@@ -1,0 +1,23 @@
+version: 2
+updates:
+  # Keep GitHub Actions (checkout, setup-python, pypi-publish, ...) up to date.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
+
+  # Python dependencies declared in pyproject.toml (bleak + dev tooling).
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      python:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore"
