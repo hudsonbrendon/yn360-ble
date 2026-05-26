@@ -26,7 +26,7 @@ async def test_set_rgb_connects_and_writes_frame():
         await light.set_rgb(255, 153, 0)
         client.connect.assert_awaited_once()
         client.write_gatt_char.assert_awaited_once_with(
-            WRITE_CHAR_UUID, b"\xae\xa1\xff\x99\x00\x56", response=False
+            WRITE_CHAR_UUID, b"\xae\xa1\xff\x99\x00\x56", response=True
         )
         assert light.is_on is True
     finally:
@@ -40,7 +40,7 @@ async def test_set_rgb_applies_brightness():
         light = YN360Light("AA:BB:CC:DD:EE:FF")
         await light.set_rgb(200, 100, 50, brightness=0.5)
         client.write_gatt_char.assert_awaited_once_with(
-            WRITE_CHAR_UUID, b"\xae\xa1\x64\x32\x19\x56", response=False
+            WRITE_CHAR_UUID, b"\xae\xa1\x64\x32\x19\x56", response=True
         )
     finally:
         patcher.stop()
@@ -53,7 +53,7 @@ async def test_set_white_writes_cct_frame():
         light = YN360Light("AA:BB:CC:DD:EE:FF")
         await light.set_white(5500, brightness=1.0)
         client.write_gatt_char.assert_awaited_once_with(
-            WRITE_CHAR_UUID, b"\xae\xaa\x01\x64\x00\x56", response=False
+            WRITE_CHAR_UUID, b"\xae\xaa\x01\x64\x00\x56", response=True
         )
         assert light.is_on is True
     finally:
@@ -68,7 +68,7 @@ async def test_turn_off_writes_off_frame_and_clears_state():
         await light.set_rgb(10, 20, 30)
         await light.turn_off()
         client.write_gatt_char.assert_awaited_with(
-            WRITE_CHAR_UUID, b"\xae\xa3\x00\x00\x00\x56", response=False
+            WRITE_CHAR_UUID, b"\xae\xa3\x00\x00\x00\x56", response=True
         )
         assert light.is_on is False
     finally:

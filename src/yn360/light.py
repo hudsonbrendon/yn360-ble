@@ -54,7 +54,10 @@ class YN360Light:
     async def _write(self, payload: bytes) -> None:
         await self.connect()
         _LOGGER.debug("Writing %s to YN360 %s", payload.hex(), self._device)
-        await self._client.write_gatt_char(WRITE_CHAR_UUID, payload, response=False)
+        # The YN360 III Pro only acts on acknowledged writes (response=True);
+        # write-without-response packets are dropped, especially when the
+        # connection is closed right after a command.
+        await self._client.write_gatt_char(WRITE_CHAR_UUID, payload, response=True)
 
     async def set_rgb(self, r: int, g: int, b: int, brightness: float = 1.0) -> None:
         sr, sg, sb = scale_rgb(r, g, b, brightness)
