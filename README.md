@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/yongnuo-logo.png" alt="Yongnuo" width="420">
+</p>
+
 # yn360-ble
 
 Control Yongnuo YN360 / YN360 III (Pro) LED lights over Bluetooth LE from Python.
