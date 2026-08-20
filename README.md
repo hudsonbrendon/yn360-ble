@@ -47,6 +47,7 @@ pip install yn360-ble
 yn360 scan                                  # find nearby lights
 yn360 rgb   AA:BB:CC:DD:EE:FF 255 153 0     # set an RGB colour
 yn360 white AA:BB:CC:DD:EE:FF 4500          # set a white colour temperature (K)
+yn360 white AA:BB:CC:DD:EE:FF 4500 --channel 3   # ...on group channel 3
 yn360 off   AA:BB:CC:DD:EE:FF               # turn off
 ```
 
@@ -70,6 +71,36 @@ asyncio.run(main())
 `YN360Light` also accepts a `bleak` `BLEDevice` (e.g. from Home Assistant's shared
 scanner or an ESPHome Bluetooth proxy), not only a string address.
 
+### Supplying your own connection
+
+Pass `client_factory` to have the light use a connection you built, instead of
+opening its own. Home Assistant uses this to route through
+`bleak_retry_connector.establish_connection`, which manages the adapter's
+connection slots and caches GATT services:
+
+```python
+from bleak import BleakClient
+from bleak_retry_connector import establish_connection
+
+light = YN360Light(
+    ble_device,
+    client_factory=lambda: establish_connection(BleakClient, ble_device, address),
+)
+```
+
+The factory must return an already connected client.
+
+### Group channels
+
+White commands carry a channel byte, so one command can address a group:
+
+```python
+await light.set_white(4500, brightness=0.8, channel=3)
+```
+
+Channels 1–8 are documented for the YN360-II. On the III Pro only channel 1 is
+confirmed to work — see [`HARDWARE.md`](HARDWARE.md).
+
 ## How it works
 
 The light speaks a 6-byte BLE command frame `[0xAE, CMD, V1, V2, V3, 0x56]` written
@@ -78,11 +109,16 @@ to a single GATT characteristic:
 | Command | CMD | V1 | V2 | V3 |
 |---|---|---|---|---|
 | RGB | `0xA1` | R | G | B |
-| White | `0xAA` | `0x01` | cool 5500 K (0–100) | warm 3200 K (0–100) |
+| White | `0xAA` | channel (1–8) | cool 5500 K (0–100) | warm 3200 K (0–100) |
 | Off | `0xA3` | `0x00` | `0x00` | `0x00` |
+| Standby | `0xEE` | channel (1–8) | cool (0–100) | warm (0–100) |
 
 - Service UUID: `f000aa60-0451-4000-b000-000000000000`
 - Write characteristic: `f000aa61-0451-4000-b000-000000000000`
+- Notify characteristic: `f000aa63-0451-4000-b000-000000000000`
+
+`0xEE` is documented elsewhere as an off that keeps the current values loaded;
+it is **not** verified on the III Pro.
 
 Commands are sent as **acknowledged writes** (`response=True`); the YN360 III Pro
 silently drops write-without-response packets. See [`HARDWARE.md`](HARDWARE.md) for
@@ -91,6 +127,9 @@ the full reverse-engineering notes.
 ## Limitations
 
 - The light has **no state feedback** over Bluetooth — it only receives commands.
+  A `notify` characteristic exists and `start_notify()` will subscribe to it, but
+  the III Pro was verified to send nothing at all, not even when its physical
+  knobs are turned. There is also no battery service to read.
 - Bluetooth LE allows **one client at a time** — close the official Yongnuo app
   while controlling the light.
 - RGB and white are mutually exclusive modes; setting one switches the active mode.
