@@ -24,6 +24,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_white = sub.add_parser("white", help="set a white color temperature in Kelvin")
     p_white.add_argument("address")
     p_white.add_argument("kelvin", type=int)
+    p_white.add_argument(
+        "--channel", type=int, default=1, help="group channel 1-8 (default 1)"
+    )
 
     p_off = sub.add_parser("off", help="turn the light off")
     p_off.add_argument("address")
@@ -46,7 +49,7 @@ async def _run(args: argparse.Namespace) -> None:
         if args.command == "rgb":
             await light.set_rgb(args.r, args.g, args.b)
         elif args.command == "white":
-            await light.set_white(args.kelvin)
+            await light.set_white(args.kelvin, channel=args.channel)
         elif args.command == "off":
             await light.turn_off()
     finally:

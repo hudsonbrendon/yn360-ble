@@ -2,8 +2,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from yn360.const import WRITE_CHAR_UUID
+from yn360.const import NOTIFY_CHAR_UUID, WRITE_CHAR_UUID
 from yn360.light import YN360Light
+from yn360.protocol import WhiteState
 
 
 def _patched_client():
@@ -83,5 +84,56 @@ async def test_does_not_reconnect_when_already_connected():
         light = YN360Light("AA:BB:CC:DD:EE:FF")
         await light.set_rgb(1, 2, 3)
         client.connect.assert_not_awaited()
+    finally:
+        patcher.stop()
+
+
+@pytest.mark.asyncio
+async def test_set_white_passes_channel():
+    patcher, client = _patched_client()
+    try:
+        light = YN360Light("AA:BB:CC:DD:EE:FF")
+        await light.set_white(5500, brightness=1.0, channel=3)
+        client.write_gatt_char.assert_awaited_once_with(
+            WRITE_CHAR_UUID, b"\xae\xaa\x03\x64\x00\x56", response=True
+        )
+    finally:
+        patcher.stop()
+
+
+@pytest.mark.asyncio
+async def test_client_factory_supplies_the_connection():
+    patcher, client = _patched_client()
+    try:
+        factory_client = AsyncMock()
+        factory_client.is_connected = True
+
+        async def factory():
+            return factory_client
+
+        light = YN360Light("AA:BB:CC:DD:EE:FF", client_factory=factory)
+        await light.connect()
+        client.connect.assert_not_awaited()
+        assert light.is_connected is True
+    finally:
+        patcher.stop()
+
+
+@pytest.mark.asyncio
+async def test_start_notify_parses_white_frames_and_drops_others():
+    patcher, client = _patched_client()
+    try:
+        client.is_connected = True
+        client.start_notify = AsyncMock()
+        light = YN360Light("AA:BB:CC:DD:EE:FF")
+        seen: list[WhiteState] = []
+        await light.start_notify(seen.append)
+
+        uuid, raw_cb = client.start_notify.await_args.args
+        assert uuid == NOTIFY_CHAR_UUID
+        raw_cb(None, bytearray(b"\xae\xaa\x01\x32\x32\x56"))
+        raw_cb(None, bytearray(b"\xae\xa1\x0a\x00\x00\x56"))
+        raw_cb(None, bytearray(b"\xff\xff"))
+        assert seen == [WhiteState(1, 50, 50)]
     finally:
         patcher.stop()

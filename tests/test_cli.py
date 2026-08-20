@@ -16,6 +16,18 @@ def test_parser_white_args():
     assert args.kelvin == 4500
 
 
+def test_parser_white_channel_defaults_to_one():
+    args = build_parser().parse_args(["white", "AA:BB:CC:DD:EE:FF", "4500"])
+    assert args.channel == 1
+
+
+def test_parser_white_accepts_channel():
+    args = build_parser().parse_args(
+        ["white", "AA:BB:CC:DD:EE:FF", "4500", "--channel", "3"]
+    )
+    assert args.channel == 3
+
+
 def test_parser_requires_subcommand():
     with pytest.raises(SystemExit):
         build_parser().parse_args([])
