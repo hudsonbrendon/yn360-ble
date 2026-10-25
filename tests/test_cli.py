@@ -31,3 +31,8 @@ def test_parser_white_accepts_channel():
 def test_parser_requires_subcommand():
     with pytest.raises(SystemExit):
         build_parser().parse_args([])
+
+
+def test_parser_status_and_standby():
+    assert build_parser().parse_args(["status", "AA:BB"]).command == "status"
+    assert build_parser().parse_args(["standby", "AA:BB"]).command == "standby"

@@ -31,6 +31,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_off = sub.add_parser("off", help="turn the light off")
     p_off.add_argument("address")
 
+    p_standby = sub.add_parser("standby", help="turn off keeping white values (reported as off)")
+    p_standby.add_argument("address")
+
+    p_status = sub.add_parser("status", help="query the light's white state")
+    p_status.add_argument("address")
+
     return parser
 
 
@@ -52,6 +58,15 @@ async def _run(args: argparse.Namespace) -> None:
             await light.set_white(args.kelvin, channel=args.channel)
         elif args.command == "off":
             await light.turn_off()
+        elif args.command == "standby":
+            await light.standby()
+        elif args.command == "status":
+            state = await light.query_status()
+            if state is None:
+                print("No status reply.")
+            else:
+                power = "on" if state.on else "standby"
+                print(f"{power} channel={state.channel} cool={state.cool} warm={state.warm}")
     finally:
         await light.disconnect()
 

@@ -4,6 +4,7 @@ from yn360 import const
 from yn360.protocol import (
     WhiteState,
     build_off_command,
+    build_query_command,
     build_rgb_command,
     build_standby_command,
     build_white_command,
@@ -32,24 +33,24 @@ def test_build_off_command():
 
 
 def test_build_white_command_full_cool():
-    assert build_white_command(100, 0) == b"\xae\xaa\x01\x64\x00\x56"
+    assert build_white_command(99, 0) == b"\xae\xaa\x01\x63\x00\x56"
 
 
 def test_build_white_command_full_warm():
-    assert build_white_command(0, 100) == b"\xae\xaa\x01\x00\x64\x56"
+    assert build_white_command(0, 99) == b"\xae\xaa\x01\x00\x63\x56"
 
 
-def test_build_white_command_rejects_over_100():
+def test_build_white_command_rejects_over_99():
     with pytest.raises(ValueError):
-        build_white_command(101, 0)
+        build_white_command(100, 0)
 
 
 def test_kelvin_min_is_pure_warm():
-    assert kelvin_to_cool_warm(3200, 1.0) == (0, 100)
+    assert kelvin_to_cool_warm(3200, 1.0) == (0, 99)
 
 
 def test_kelvin_max_is_pure_cool():
-    assert kelvin_to_cool_warm(5500, 1.0) == (100, 0)
+    assert kelvin_to_cool_warm(5500, 1.0) == (99, 0)
 
 
 def test_kelvin_midpoint_is_balanced():
@@ -61,8 +62,8 @@ def test_kelvin_brightness_scales_both_channels():
 
 
 def test_kelvin_out_of_range_is_clamped():
-    assert kelvin_to_cool_warm(1000, 1.0) == (0, 100)
-    assert kelvin_to_cool_warm(9000, 1.0) == (100, 0)
+    assert kelvin_to_cool_warm(1000, 1.0) == (0, 99)
+    assert kelvin_to_cool_warm(9000, 1.0) == (99, 0)
 
 
 def test_scale_rgb_half_brightness():
@@ -79,7 +80,7 @@ def test_scale_rgb_clamps_brightness():
 
 
 def test_build_white_command_channel():
-    assert build_white_command(100, 0, channel=3) == b"\xae\xaa\x03\x64\x00\x56"
+    assert build_white_command(99, 0, channel=3) == b"\xae\xaa\x03\x63\x00\x56"
 
 
 def test_build_white_command_rejects_bad_channel():
@@ -104,7 +105,7 @@ def test_parse_white_notification_roundtrip():
 def test_parse_white_notification_rejects_garbage():
     assert parse_white_notification(b"") is None
     assert parse_white_notification(b"\xae\xa1\x0a\x00\x00\x56") is None  # rgb frame
-    assert parse_white_notification(b"\xae\xaa\x01\xff\x32\x56") is None  # cool > 100
+    assert parse_white_notification(b"\xae\xaa\x01\xff\x32\x56") is None  # cool > 99
     assert parse_white_notification(b"\x00\xaa\x01\x32\x32\x56") is None  # bad header
     assert parse_white_notification(b"\xae\xaa\x01\x32\x32\x00") is None  # bad footer
 
@@ -132,3 +133,18 @@ def test_uuids_are_lowercase_canonical():
     assert const.SERVICE_UUID == "f000aa60-0451-4000-b000-000000000000"
     assert const.WRITE_CHAR_UUID == "f000aa61-0451-4000-b000-000000000000"
     assert const.NOTIFY_CHAR_UUID == "f000aa63-0451-4000-b000-000000000000"
+
+
+def test_build_query_command():
+    assert build_query_command() == b"\xae\x33\x00\x00\x00\x56"
+
+
+def test_parse_status_reply_captured_from_iii_pro():
+    # Frames the III Pro sent back to a 0x33 query on 2026-10-25.
+    assert parse_white_notification(bytes.fromhex("AEAA01516356")) == (
+        WhiteState(1, 0x51, 0x63, on=True)
+    )
+    assert parse_white_notification(bytes.fromhex("AEEE01320A56")) == WhiteState(
+        1, 0x32, 0x0A, on=False
+    )
+    assert parse_white_notification(bytes.fromhex("A509435000AD56015A")) is None

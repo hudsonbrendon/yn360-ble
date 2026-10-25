@@ -54,7 +54,7 @@ async def test_set_white_writes_cct_frame():
         light = YN360Light("AA:BB:CC:DD:EE:FF")
         await light.set_white(5500, brightness=1.0)
         client.write_gatt_char.assert_awaited_once_with(
-            WRITE_CHAR_UUID, b"\xae\xaa\x01\x64\x00\x56", response=True
+            WRITE_CHAR_UUID, b"\xae\xaa\x01\x63\x00\x56", response=True
         )
         assert light.is_on is True
     finally:
@@ -95,7 +95,7 @@ async def test_set_white_passes_channel():
         light = YN360Light("AA:BB:CC:DD:EE:FF")
         await light.set_white(5500, brightness=1.0, channel=3)
         client.write_gatt_char.assert_awaited_once_with(
-            WRITE_CHAR_UUID, b"\xae\xaa\x03\x64\x00\x56", response=True
+            WRITE_CHAR_UUID, b"\xae\xaa\x03\x63\x00\x56", response=True
         )
     finally:
         patcher.stop()
@@ -135,5 +135,55 @@ async def test_start_notify_parses_white_frames_and_drops_others():
         raw_cb(None, bytearray(b"\xae\xa1\x0a\x00\x00\x56"))
         raw_cb(None, bytearray(b"\xff\xff"))
         assert seen == [WhiteState(1, 50, 50)]
+    finally:
+        patcher.stop()
+
+
+@pytest.mark.asyncio
+async def test_standby_reuses_last_white_values():
+    patcher, client = _patched_client()
+    try:
+        light = YN360Light("AA:BB:CC:DD:EE:FF")
+        await light.set_white(5500, brightness=1.0, channel=2)
+        await light.standby()
+        client.write_gatt_char.assert_awaited_with(
+            WRITE_CHAR_UUID, b"\xae\xee\x02\x63\x00\x56", response=True
+        )
+        assert light.is_on is False
+    finally:
+        patcher.stop()
+
+
+@pytest.mark.asyncio
+async def test_query_status_returns_reply_and_device_info():
+    patcher, client = _patched_client()
+    handlers = {}
+    client.start_notify = AsyncMock(side_effect=lambda uuid, cb: handlers.setdefault(uuid, cb))
+    client.stop_notify = AsyncMock()
+
+    async def _reply(uuid, payload, response):
+        assert payload == b"\xae\x33\x00\x00\x00\x56"
+        cb = handlers[NOTIFY_CHAR_UUID]
+        cb(None, bytearray.fromhex("A509435000AD56015A"))
+        cb(None, bytearray.fromhex("AEEE01320A56"))
+
+    client.write_gatt_char = AsyncMock(side_effect=_reply)
+    try:
+        light = YN360Light("AA:BB:CC:DD:EE:FF")
+        state = await light.query_status()
+        assert state == WhiteState(1, 0x32, 0x0A, on=False)
+        assert light.device_info == bytes.fromhex("A509435000AD56015A")
+    finally:
+        patcher.stop()
+
+
+@pytest.mark.asyncio
+async def test_query_status_times_out_to_none():
+    patcher, client = _patched_client()
+    client.start_notify = AsyncMock()
+    client.stop_notify = AsyncMock()
+    try:
+        light = YN360Light("AA:BB:CC:DD:EE:FF")
+        assert await light.query_status(timeout=0.01) is None
     finally:
         patcher.stop()

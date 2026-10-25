@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 
@@ -13,7 +14,9 @@ from .protocol import (
     WHITE_CHANNEL,
     WhiteState,
     build_off_command,
+    build_query_command,
     build_rgb_command,
+    build_standby_command,
     build_white_command,
     kelvin_to_cool_warm,
     parse_white_notification,
@@ -46,6 +49,9 @@ class YN360Light:
         self._is_on = False
         self._rgb: tuple[int, int, int] = (255, 255, 255)
         self._brightness = 1.0
+        self._white = WhiteState(WHITE_CHANNEL, 0, 0)
+        # Last 0xA5...0x5A device-info frame seen in a status reply (opaque).
+        self.device_info: bytes | None = None
 
     @property
     def is_connected(self) -> bool:
@@ -89,14 +95,55 @@ class YN360Light:
     ) -> None:
         cool, warm = kelvin_to_cool_warm(kelvin, brightness)
         await self._write(build_white_command(cool, warm, channel))
+        self._white = WhiteState(channel, cool, warm)
         self._brightness = brightness
         self._is_on = True
+
+    async def standby(self, channel: int | None = None) -> None:
+        """Turn off (RGB too) keeping the last white values loaded (0xEE).
+
+        Unlike :meth:`turn_off`, the light then reports itself as off in
+        :meth:`query_status`.
+        """
+        channel = self._white.channel if channel is None else channel
+        await self._write(build_standby_command(self._white.cool, self._white.warm, channel))
+        self._white = WhiteState(channel, self._white.cool, self._white.warm, on=False)
+        self._is_on = False
+
+    async def query_status(self, timeout: float = 2.0) -> WhiteState | None:
+        """Ask the light for its white state; None if it does not answer in time.
+
+        The reply reflects the physical knobs and the last 0xAA/0xEE frame;
+        RGB output is not reported. ``on`` is False after :meth:`standby`.
+        """
+        await self.connect()
+        reply: asyncio.Future[WhiteState] = asyncio.get_running_loop().create_future()
+
+        def _on_notify(_sender: object, data: bytearray) -> None:
+            frame = bytes(data)
+            if frame[:1] == b"\xa5":
+                self.device_info = frame
+            state = parse_white_notification(frame)
+            if state is not None and not reply.done():
+                reply.set_result(state)
+
+        await self._client.start_notify(NOTIFY_CHAR_UUID, _on_notify)
+        try:
+            await self._client.write_gatt_char(
+                WRITE_CHAR_UUID, build_query_command(), response=True
+            )
+            return await asyncio.wait_for(reply, timeout)
+        except TimeoutError:
+            return None
+        finally:
+            if self._client.is_connected:
+                await self._client.stop_notify(NOTIFY_CHAR_UUID)
 
     async def start_notify(self, callback: Callable[[WhiteState], None]) -> None:
         """Subscribe to notifications, delivering parsed white states.
 
-        The III Pro does not echo app-sent commands and was not observed to
-        report knob movement either; see HARDWARE.md.
+        The III Pro sends nothing unprompted (not even on knob movement); it
+        answers the status query. See :meth:`query_status` and HARDWARE.md.
         """
         await self.connect()
 

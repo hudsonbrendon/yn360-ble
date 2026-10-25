@@ -25,6 +25,8 @@ but works standalone in any async Python project (or straight from the command l
 - 🎨 **RGB colour**
 - 🌡️ **White colour temperature** — 3200 K (warm) to 5500 K (cool), the light's
   bi-colour range.
+- 📡 **Status query** — read the light's real white state (follows the physical knobs) and on/standby.
+- 💤 **Standby** — off that keeps the white values and is reported as off.
 - 🔍 **Discovery helper** — `discover()` finds nearby YN360 lights.
 - 🖥️ **CLI** — `yn360 scan / rgb / white / off` for quick testing.
 
@@ -49,6 +51,8 @@ yn360 rgb   AA:BB:CC:DD:EE:FF 255 153 0     # set an RGB colour
 yn360 white AA:BB:CC:DD:EE:FF 4500          # set a white colour temperature (K)
 yn360 white AA:BB:CC:DD:EE:FF 4500 --channel 3   # ...on group channel 3
 yn360 off   AA:BB:CC:DD:EE:FF               # turn off
+yn360 standby AA:BB:CC:DD:EE:FF             # off, reported as standby
+yn360 status  AA:BB:CC:DD:EE:FF             # e.g. "on channel=1 cool=52 warm=47"
 ```
 
 ## Library usage
@@ -98,8 +102,8 @@ White commands carry a channel byte, so one command can address a group:
 await light.set_white(4500, brightness=0.8, channel=3)
 ```
 
-Channels 1–8 are documented for the YN360-II. On the III Pro only channel 1 is
-confirmed to work — see [`HARDWARE.md`](HARDWARE.md).
+The light only acts on frames for the channel it is set to (channel 1 by
+default); frames for other channels are ignored — see [`HARDWARE.md`](HARDWARE.md).
 
 ## How it works
 
@@ -109,16 +113,18 @@ to a single GATT characteristic:
 | Command | CMD | V1 | V2 | V3 |
 |---|---|---|---|---|
 | RGB | `0xA1` | R | G | B |
-| White | `0xAA` | channel (1–8) | cool 5500 K (0–100) | warm 3200 K (0–100) |
+| White | `0xAA` | channel (1–8) | cool 5500 K (0–99) | warm 3200 K (0–99) |
 | Off | `0xA3` | `0x00` | `0x00` | `0x00` |
-| Standby | `0xEE` | channel (1–8) | cool (0–100) | warm (0–100) |
+| Standby | `0xEE` | channel (1–8) | cool (0–99) | warm (0–99) |
+| Status query | `0x33` | `0x00` | `0x00` | `0x00` |
 
 - Service UUID: `f000aa60-0451-4000-b000-000000000000`
 - Write characteristic: `f000aa61-0451-4000-b000-000000000000`
 - Notify characteristic: `f000aa63-0451-4000-b000-000000000000`
 
-`0xEE` is documented elsewhere as an off that keeps the current values loaded;
-it is **not** verified on the III Pro.
+`0xEE` turns the light off (RGB too) and keeps the white values loaded. The
+status query is answered on the notify characteristic with the white state
+(`0xAA` on / `0xEE` standby) — RGB output is not reported.
 
 Commands are sent as **acknowledged writes** (`response=True`); the YN360 III Pro
 silently drops write-without-response packets. See [`HARDWARE.md`](HARDWARE.md) for
@@ -126,10 +132,10 @@ the full reverse-engineering notes.
 
 ## Limitations
 
-- The light has **no state feedback** over Bluetooth — it only receives commands.
-  A `notify` characteristic exists and `start_notify()` will subscribe to it, but
-  the III Pro was verified to send nothing at all, not even when its physical
-  knobs are turned. There is also no battery service to read.
+- State feedback covers **white mode only**: `query_status()` returns on/standby,
+  channel and the cool/warm levels (including knob changes), but not RGB.
+  Nothing is pushed unprompted — poll it.
+- No built-in effects on the III Pro (the app's effect frames are ignored).
 - Bluetooth LE allows **one client at a time** — close the official Yongnuo app
   while controlling the light.
 - RGB and white are mutually exclusive modes; setting one switches the active mode.
