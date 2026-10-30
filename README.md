@@ -61,13 +61,15 @@ yn360 status  AA:BB:CC:DD:EE:FF             # e.g. "on channel=1 cool=52 warm=47
 import asyncio
 from yn360 import YN360Light, discover
 
+
 async def main():
     devices = await discover()
     light = YN360Light(devices[0])
-    await light.set_rgb(255, 153, 0)             # orange
+    await light.set_rgb(255, 153, 0)  # orange
     await light.set_white(4500, brightness=0.8)  # warm-ish white at 80%
     await light.turn_off()
     await light.disconnect()
+
 
 asyncio.run(main())
 ```

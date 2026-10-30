@@ -29,8 +29,7 @@ async def main() -> None:
 
         await client.start_notify(NOTIFY, cb)
         print(
-            f"Listening {LISTEN_SECONDS}s — turn the physical knobs "
-            "(white tone AND rgb) now...",
+            f"Listening {LISTEN_SECONDS}s — turn the physical knobs (white tone AND rgb) now...",
             flush=True,
         )
         await asyncio.sleep(LISTEN_SECONDS)

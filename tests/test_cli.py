@@ -22,9 +22,7 @@ def test_parser_white_channel_defaults_to_one():
 
 
 def test_parser_white_accepts_channel():
-    args = build_parser().parse_args(
-        ["white", "AA:BB:CC:DD:EE:FF", "4500", "--channel", "3"]
-    )
+    args = build_parser().parse_args(["white", "AA:BB:CC:DD:EE:FF", "4500", "--channel", "3"])
     assert args.channel == 3
 
 

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections.abc import Awaitable, Callable
+import logging
 
 from bleak import BleakClient
 from bleak.backends.device import BLEDevice
@@ -55,13 +55,16 @@ class YN360Light:
 
     @property
     def is_connected(self) -> bool:
+        """Whether the underlying BLE client is connected."""
         return self._client.is_connected
 
     @property
     def is_on(self) -> bool:
+        """Last known power state as tracked by this object."""
         return self._is_on
 
     async def connect(self) -> None:
+        """Open the BLE connection if it is not already open."""
         if self._client.is_connected:
             return
         _LOGGER.debug("Connecting to YN360 %s", self._device)
@@ -71,6 +74,7 @@ class YN360Light:
             await self._client.connect()
 
     async def disconnect(self) -> None:
+        """Close the BLE connection if open."""
         if self._client.is_connected:
             _LOGGER.debug("Disconnecting from YN360 %s", self._device)
             await self._client.disconnect()
@@ -84,6 +88,7 @@ class YN360Light:
         await self._client.write_gatt_char(WRITE_CHAR_UUID, payload, response=True)
 
     async def set_rgb(self, r: int, g: int, b: int, brightness: float = 1.0) -> None:
+        """Set an RGB color (0-255 each) scaled by brightness (0.0-1.0)."""
         sr, sg, sb = scale_rgb(r, g, b, brightness)
         await self._write(build_rgb_command(sr, sg, sb))
         self._rgb = (r, g, b)
@@ -93,6 +98,7 @@ class YN360Light:
     async def set_white(
         self, kelvin: int, brightness: float = 1.0, channel: int = WHITE_CHANNEL
     ) -> None:
+        """Set a white color temperature (3200-5500K) at brightness on a group channel."""
         cool, warm = kelvin_to_cool_warm(kelvin, brightness)
         await self._write(build_white_command(cool, warm, channel))
         self._white = WhiteState(channel, cool, warm)
@@ -155,9 +161,11 @@ class YN360Light:
         await self._client.start_notify(NOTIFY_CHAR_UUID, _on_notify)
 
     async def stop_notify(self) -> None:
+        """Unsubscribe from notifications if connected."""
         if self._client.is_connected:
             await self._client.stop_notify(NOTIFY_CHAR_UUID)
 
     async def turn_off(self) -> None:
+        """Turn the light off (0xA3)."""
         await self._write(build_off_command())
         self._is_on = False
