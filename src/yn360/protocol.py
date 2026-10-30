@@ -108,9 +108,9 @@ def _clamp(value: float, low: float, high: float) -> float:
 
 def kelvin_to_cool_warm(kelvin: int, brightness: float = 1.0) -> tuple[int, int]:
     """Map a color temperature (3200-5500K) + brightness (0.0-1.0) to (cool, warm) 0-99."""
-    kelvin = _clamp(kelvin, WHITE_MIN_KELVIN, WHITE_MAX_KELVIN)
+    clamped = _clamp(kelvin, WHITE_MIN_KELVIN, WHITE_MAX_KELVIN)
     brightness = _clamp(brightness, 0.0, 1.0)
-    percent_cool = (kelvin - WHITE_MIN_KELVIN) / (WHITE_MAX_KELVIN - WHITE_MIN_KELVIN)
+    percent_cool = (clamped - WHITE_MIN_KELVIN) / (WHITE_MAX_KELVIN - WHITE_MIN_KELVIN)
     cool = round(percent_cool * WHITE_MAX_LEVEL * brightness)
     warm = round((1.0 - percent_cool) * WHITE_MAX_LEVEL * brightness)
     return cool, warm
@@ -127,9 +127,7 @@ def cool_warm_to_kelvin(cool: int, warm: int) -> tuple[int, float] | None:
     if total == 0:
         return None
     percent_cool = cool / total
-    kelvin = round(
-        WHITE_MIN_KELVIN + percent_cool * (WHITE_MAX_KELVIN - WHITE_MIN_KELVIN)
-    )
+    kelvin = round(WHITE_MIN_KELVIN + percent_cool * (WHITE_MAX_KELVIN - WHITE_MIN_KELVIN))
     return kelvin, min(1.0, total / WHITE_MAX_LEVEL)
 
 

@@ -10,6 +10,7 @@ from .scanner import discover
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the ``yn360`` argument parser."""
     parser = argparse.ArgumentParser(prog="yn360", description="Control a Yongnuo YN360 over BLE")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -24,9 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_white = sub.add_parser("white", help="set a white color temperature in Kelvin")
     p_white.add_argument("address")
     p_white.add_argument("kelvin", type=int)
-    p_white.add_argument(
-        "--channel", type=int, default=1, help="group channel 1-8 (default 1)"
-    )
+    p_white.add_argument("--channel", type=int, default=1, help="group channel 1-8 (default 1)")
 
     p_off = sub.add_parser("off", help="turn the light off")
     p_off.add_argument("address")
@@ -72,6 +71,7 @@ async def _run(args: argparse.Namespace) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """CLI entry point."""
     args = build_parser().parse_args(argv)
     asyncio.run(_run(args))
 

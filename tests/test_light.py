@@ -158,7 +158,7 @@ async def test_standby_reuses_last_white_values():
 async def test_query_status_returns_reply_and_device_info():
     patcher, client = _patched_client()
     handlers = {}
-    client.start_notify = AsyncMock(side_effect=lambda uuid, cb: handlers.setdefault(uuid, cb))
+    client.start_notify = AsyncMock(side_effect=handlers.setdefault)
     client.stop_notify = AsyncMock()
 
     async def _reply(uuid, payload, response):
